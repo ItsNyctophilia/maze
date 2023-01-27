@@ -8,7 +8,8 @@ enum {
 	FILE_ERROR = 2
 };
 
-void load_maze(FILE * fo);
+void dimensions_of_maze(FILE * fo, size_t *height, size_t *width);
+void load_maze(FILE * fo, char **maze, size_t height, size_t width);
 
 int main(int argc, char *argv[])
 {
@@ -22,29 +23,68 @@ int main(int argc, char *argv[])
 		perror("Could not open maze file");
 		return FILE_ERROR;
 	}
-	load_maze(fo);
+	char *maze;
+	size_t height;
+	size_t width;
+	dimensions_of_maze(fo, &height, &width);
+	load_maze(fo, &maze, height, width);
+
+	for (size_t i = 0; i < height; ++i) {
+		printf("%.*s\n", (int)width, maze + (width * i));
+	}
+	free(maze);
 	fclose(fo);
 	return (SUCCESS);
 }
 
-void load_maze(FILE * fo)
+void load_maze(FILE * fo, char **maze, size_t height, size_t width)
 {
 	char *line_buf = NULL;
 	size_t buf_size = 0;
-	size_t height = 2;	// Vertical boundary
-	size_t width = 2;	// Horizontal boundary X(...)X
-	while (getline(&line_buf, &buf_size, fo) != -1) {
-		strtok(line_buf, "\n");
-		if (strlen(line_buf) > width - 2) {
-			width = strlen(line_buf) + 2;
-		}
-		++height;
+	*maze = malloc(((height * width) + 1) * sizeof(**maze));
+	if (!*maze) {
+		fprintf(stderr, "Memory allocation error");
 	}
-	fseek(fo, 0, SEEK_SET);
-	printf("height: %zu, width: %zu\n", height, width);
+
+	memset(*maze, ' ', width * height);	// Set all bytes except last to ' '
+	memset(*maze + (width * height), '\0', 1);	// Null terminator
+	memset(*maze, 'X', width);	// Top row
+	memset(*maze + ((height * width) - width), 'X', width);	// Bottom row
+	size_t counter = 1;	// Offset from top row
+	while (getline(&line_buf, &buf_size, fo) != -1) {
+		if (strchr(line_buf, '\n')) {
+			char *tmp = strchr(line_buf, '\n');
+			*tmp = ' ';
+		}
+		memset(*maze + (width * counter), 'X', 1);
+		memcpy(*maze + (width * counter + 1), line_buf,
+		       strlen(line_buf));
+		memset(*maze + (width * counter + (width - 1)), 'X', 1);
+		++counter;
+	}
 
 	if (line_buf) {
 		free(line_buf);
 	}
+
 	return;
+}
+
+void dimensions_of_maze(FILE * fo, size_t *height, size_t *width)
+{
+	*height = 2;
+	*width = 2;
+	char *line_buf = NULL;
+	size_t buf_size = 0;
+	while (getline(&line_buf, &buf_size, fo) != -1) {
+		strtok(line_buf, "\n");
+		if (strlen(line_buf) > *width - 2) {
+			*width = strlen(line_buf) + 2;
+		}
+		++*height;
+	}
+	if (line_buf) {
+		free(line_buf);
+	}
+	fseek(fo, 0, SEEK_SET);
 }
