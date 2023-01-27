@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "lib/graph.h"
+#include "lib/path.h"
 
 enum {
 	SUCCESS = 0,
@@ -8,14 +10,21 @@ enum {
 	FILE_ERROR = 2
 };
 
-void dimensions_of_maze(FILE * fo, size_t *height, size_t *width);
-void load_maze(FILE * fo, char **maze, size_t height, size_t width);
+union int_as_void {
+	int num;
+	void *ptr;
+};
+
+int maze_node_cmp(const void *src, const void *dst);
+void dimensions_of_maze(FILE * fo, int *height, int *width);
+double find_weight(char target);
+graph *load_maze(FILE * fo, char **maze, int height, int width);
 
 int main(int argc, char *argv[])
 {
 	if (argc != 2) {
 		fprintf(stderr, "Usage: %s mazefile\n", argv[0]);
-		return (INVOCATION_ERROR);
+		return INVOCATION_ERROR;
 	}
 
 	FILE *fo = fopen(argv[1], "r");
@@ -24,20 +33,27 @@ int main(int argc, char *argv[])
 		return FILE_ERROR;
 	}
 	char *maze;
-	size_t height;
-	size_t width;
+	int height;
+	int width;
 	dimensions_of_maze(fo, &height, &width);
-	load_maze(fo, &maze, height, width);
+	graph *g = load_maze(fo, &maze, height, width);
 
-	for (size_t i = 0; i < height; ++i) {
+	for (int i = 0; i < height; ++i) {
 		printf("%.*s\n", (int)width, maze + (width * i));
 	}
+	graph_destroy(g);
+
 	free(maze);
 	fclose(fo);
-	return (SUCCESS);
+	return SUCCESS;
 }
 
-void load_maze(FILE * fo, char **maze, size_t height, size_t width)
+int maze_node_cmp(const void *src, const void *dst)
+{
+	return (union int_as_void *)src - (union int_as_void *)dst;
+}
+
+graph *load_maze(FILE * fo, char **maze, int height, int width)
 {
 	char *line_buf = NULL;
 	size_t buf_size = 0;
@@ -63,14 +79,64 @@ void load_maze(FILE * fo, char **maze, size_t height, size_t width)
 		++counter;
 	}
 
+	graph *g = graph_create(maze_node_cmp, NULL);
+	for (int i = 0; i < height * width - 1; ++i) {
+		if ((*maze + i)[0] != '#') {
+			// Case: node is not a wall
+			union int_as_void num = {.num = i };
+			graph_add_node(g, num.ptr);
+		}
+		if (i % width) {
+			// Case: node has left neighbor
+			union int_as_void curr = {.num = i };
+			union int_as_void prev = {.num = i - 1 };
+			if ((*maze + i - 1)[0] == '#') {
+				// Case: left neighbor is wall
+				continue;
+			}
+			graph_add_edge(g, prev.ptr, curr.ptr,
+				       find_weight((*maze + i)[0]));
+			graph_add_edge(g, curr.ptr, prev.ptr,
+				       find_weight((*maze + i - 1)[0]));
+		}
+		if ((i - width) > -1) {
+			// Case: node has an above neighbor
+			union int_as_void curr = {.num = i };
+			union int_as_void up = {.num = i - width };
+			if ((*maze + i - width)[0] == '#') {
+				// Case: above neighbor is wall
+				continue;
+			}
+			graph_add_edge(g, up.ptr, curr.ptr,
+				       find_weight((*maze + i)[0]));
+			graph_add_edge(g, curr.ptr, up.ptr,
+				       find_weight((*maze + i - width)[0]));
+		}
+	}
+
 	if (line_buf) {
 		free(line_buf);
 	}
 
-	return;
+	return (g);
 }
 
-void dimensions_of_maze(FILE * fo, size_t *height, size_t *width)
+double find_weight(char target)
+{
+	switch (target) {
+	case '@':
+	case '>':
+	case ' ':
+		return 1;
+	case 'X':
+		return .5;
+	case '#':
+		return 11;
+	}
+	return 0;
+}
+
+void dimensions_of_maze(FILE * fo, int *height, int *width)
 {
 	*height = 2;
 	*width = 2;
