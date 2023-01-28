@@ -57,6 +57,13 @@ int main(int argc, char *argv[])
 		free(maze);
 		fclose(fo);
 		return (INVALID_MAP);
+	} else if (strlen(maze) == 4) {
+		// Case: file was empty (2x2 of 'X' is created by default)
+		fprintf(stderr, "Error: empty file\n");
+		graph_destroy(g);
+		free(maze);
+		fclose(fo);	
+		return (INVALID_MAP);	
 	}
 	union int_as_void start = {.num = (strchr(maze, '@')) - maze };
 	union int_as_void finish = {.num = (strchr(maze, '>')) - maze };
