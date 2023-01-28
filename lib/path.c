@@ -19,12 +19,15 @@ static void add_to_pqueue_if_faster(const void *neighbor)
 {
 	char *nbr_str = malloc(sizeof(*nbr_str) * 20);
 	snprintf(nbr_str, 20, "%ld", (long)neighbor);
-	double weight = graph_get_edge_weight(dijkstra_graph, curr_item, neighbor);
+
+	double weight =
+	    graph_get_edge_weight(dijkstra_graph, curr_item, neighbor);
 	double distance = weight + priority;
 
-	union double_pointer current_best = {.p = map_get(distance_from_origin, nbr_str)};
+	union double_pointer current_best = {.p =
+		    map_get(distance_from_origin, nbr_str)
+	};
 
-	//TODO refactor out duplication
 	if (!map_get(previous, nbr_str)) {
 		// Nothing in Dijkstra's changes these items or neighbors; this cast is safe
 		map_set(previous, nbr_str, (void *)curr_item);
@@ -45,7 +48,7 @@ static void add_to_pqueue_if_faster(const void *neighbor)
 	free(nbr_str);
 }
 
-list *dijkstra_path(const graph *g, const void *start, const void *end)
+list *dijkstra_path(const graph * g, const void *start, const void *end)
 {
 	// Results are borrowed from the graph g
 	list *results = list_create(NULL);
@@ -64,23 +67,21 @@ list *dijkstra_path(const graph *g, const void *start, const void *end)
 	while (!pqueue_is_empty(to_process)) {
 		curr_item = pqueue_dequeue(to_process, &priority);
 
-		// TODO
 		if (curr_item == end) {
 			break;
 		}
-
 		graph_iterate_neighbors(g, curr_item, add_to_pqueue_if_faster);
+
 	}
-	char *end_str = malloc(sizeof(*end_str) * 20);
-	snprintf(end_str, 20, "%ld", (long)end);
 	const void *curr = end;
-	// TODO have this be a graph comparison function?
-	while (end_str != NULL) {
+	while (curr != start && curr != NULL) {
 		// Nothing in Dijkstra's changes these items or neighbors, but the graph owner
 		// may want to, so this cast is safe
 		list_prepend(results, (void *)curr);
-
-		end_str = map_get(previous, end_str);
+		char *curr_str = malloc(sizeof(*curr_str) * 20);
+		snprintf(curr_str, 20, "%ld", (long)curr);
+		curr = map_get(previous, curr_str);
+		free(curr_str);
 	}
 	map_destroy(distance_from_origin);
 	map_destroy(previous);
@@ -88,4 +89,3 @@ list *dijkstra_path(const graph *g, const void *start, const void *end)
 
 	return results;
 }
-
