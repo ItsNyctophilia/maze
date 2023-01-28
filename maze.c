@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lib/graph.h"
+#include <unistd.h>
+#include "lib/graph.h"		// libraries and dependencies taken from Liam Echlin
 #include "lib/path.h"
 
 enum {
@@ -13,33 +14,48 @@ enum {
 };
 
 union int_as_void {
-	int num;		// TODO: Change this to long
+	long num;		// TODO: Change this to long
 	void *ptr;
 };
 
-char *maze;
+static struct {
+	bool doors;
+	bool water;
+} options = { false, false };
+
+char *maze;			// global so that add_path can modify 
 
 int maze_node_cmp(const void *src, const void *dst);
 void dimensions_of_maze(FILE * fo, int *height, int *width);
 double find_weight(char target);
 graph *load_maze(FILE * fo, char **maze, int height, int width);
-
-void add_path(void *data)
-{
-	if (maze[(long)data] != '@' && maze[(long)data] != '>') {
-		maze[(long)data] = '.';
-	}
-	return;
-}
+void add_path(void *data);
 
 int main(int argc, char *argv[])
 {
-	if (argc != 2) {
-		fprintf(stderr, "Usage: %s mazefile\n", argv[0]);
+	int opt;
+	while ((opt = getopt(argc, argv, "dw")) != -1) {
+		switch (opt) {
+		case 'd':
+			options.doors = true;
+			break;
+		case 'w':
+			options.water = true;
+			break;
+		case '?':
+			return (INVOCATION_ERROR);
+		}
+	}
+
+	argc -= optind;
+	argv += optind;
+
+	if (argc != 1) {
+		fprintf(stderr, "Usage: ./maze mazefile\n");
 		return INVOCATION_ERROR;
 	}
 
-	FILE *fo = fopen(argv[1], "r");
+	FILE *fo = fopen(argv[0], "r");
 	if (!fo) {
 		perror("Could not open maze file");
 		return FILE_ERROR;
@@ -50,7 +66,10 @@ int main(int argc, char *argv[])
 	graph *g = load_maze(fo, &maze, height, width);
 	// Add null terminator before using string functions on maze
 	memset(maze + height * width, '\0', 1);
-	if (strlen(maze) != strspn(maze, " >@#X")) {
+	char valid_set[10];	// Enough space to fit all valid chars
+	snprintf(valid_set, 10, " #@>X%s%s", options.doors ? "/+" : "",
+		 options.water ? "~" : "");
+	if (strlen(maze) != strspn(maze, valid_set)) {
 		// Case: found disallowed symbols in maze
 		fprintf(stderr, "Error: invalid symbol(s) in maze\n");
 		graph_destroy(g);
@@ -62,8 +81,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Error: empty file\n");
 		graph_destroy(g);
 		free(maze);
-		fclose(fo);	
-		return (INVALID_MAP);	
+		fclose(fo);
+		return (INVALID_MAP);
 	}
 	union int_as_void start = {.num = (strchr(maze, '@')) - maze };
 	union int_as_void finish = {.num = (strchr(maze, '>')) - maze };
@@ -103,6 +122,14 @@ int main(int argc, char *argv[])
 	free(maze);
 	fclose(fo);
 	return SUCCESS;
+}
+
+void add_path(void *data)
+{
+	if (maze[(long)data] != '@' && maze[(long)data] != '>') {
+		maze[(long)data] = '.';
+	}
+	return;
 }
 
 int maze_node_cmp(const void *src, const void *dst)
@@ -177,6 +204,11 @@ graph *load_maze(FILE * fo, char **maze, int height, int width)
 double find_weight(char target)
 {
 	switch (target) {
+	case '~':
+		return 3;
+	case '+':
+		return 2;
+	case '/':
 	case '@':
 	case '>':
 	case ' ':
