@@ -20,6 +20,11 @@ void dimensions_of_maze(FILE * fo, int *height, int *width);
 double find_weight(char target);
 graph *load_maze(FILE * fo, char **maze, int height, int width);
 
+void print_list(const void *data)
+{
+	printf("%ld ->", (long)data);
+}
+
 int main(int argc, char *argv[])
 {
 	if (argc != 2) {
@@ -37,12 +42,20 @@ int main(int argc, char *argv[])
 	int width;
 	dimensions_of_maze(fo, &height, &width);
 	graph *g = load_maze(fo, &maze, height, width);
-
+	// TODO: Validate symbols in maze
 	for (int i = 0; i < height; ++i) {
 		printf("%.*s\n", (int)width, maze + (width * i));
 	}
+	union int_as_void start = {.num = (strchr(maze, '@')) - maze};
+	union int_as_void finish = {.num = (strchr(maze, '>')) - maze};
+	printf("inds: %d indf: %d\n", start.num, finish.num);
+	int len = 0;
+	list *path = dijkstra_path(g, start.ptr, finish.ptr);
+	printf("length: %d\n", len);
+	//graph_iterate_nodes(g, print_list);
+	list_iterate(path, print_list);
 	graph_destroy(g);
-
+	list_destroy(path);
 	free(maze);
 	fclose(fo);
 	return SUCCESS;
@@ -50,20 +63,19 @@ int main(int argc, char *argv[])
 
 int maze_node_cmp(const void *src, const void *dst)
 {
-	return (union int_as_void *)src - (union int_as_void *)dst;
+	return (long)src - (long)dst;
 }
 
 graph *load_maze(FILE * fo, char **maze, int height, int width)
 {
 	char *line_buf = NULL;
 	size_t buf_size = 0;
-	*maze = malloc(((height * width) + 1) * sizeof(**maze));
+	*maze = malloc(((height * width)) * sizeof(**maze));
 	if (!*maze) {
 		fprintf(stderr, "Memory allocation error");
 	}
 
 	memset(*maze, ' ', width * height);	// Set all bytes except last to ' '
-	memset(*maze + (width * height), '\0', 1);	// Null terminator
 	memset(*maze, 'X', width);	// Top row
 	memset(*maze + ((height * width) - width), 'X', width);	// Bottom row
 	size_t counter = 1;	// Offset from top row
@@ -81,12 +93,10 @@ graph *load_maze(FILE * fo, char **maze, int height, int width)
 
 	graph *g = graph_create(maze_node_cmp, NULL);
 	for (int i = 0; i < height * width - 1; ++i) {
-		if ((*maze + i)[0] != '#') {
-			// Case: node is not a wall
-			union int_as_void num = {.num = i };
-			graph_add_node(g, num.ptr);
-		}
-		if (i % width) {
+		// TODO: fix index 0
+		union int_as_void num = {.num = i };
+		graph_add_node(g, num.ptr);
+		if (i % width != 0) {
 			// Case: node has left neighbor
 			union int_as_void curr = {.num = i };
 			union int_as_void prev = {.num = i - 1 };
@@ -98,8 +108,10 @@ graph *load_maze(FILE * fo, char **maze, int height, int width)
 				       find_weight((*maze + i)[0]));
 			graph_add_edge(g, curr.ptr, prev.ptr,
 				       find_weight((*maze + i - 1)[0]));
+			printf("edge from node %d -> node %d: %f\n", i, i - 1, graph_get_edge_weight(g, curr.ptr, prev.ptr));
+			printf("edge from node %d <- node %d: %f\n", i, i - 1, graph_get_edge_weight(g, prev.ptr, curr.ptr));
 		}
-		if ((i - width) > -1) {
+		if ((i - width) >= 0) {
 			// Case: node has an above neighbor
 			union int_as_void curr = {.num = i };
 			union int_as_void up = {.num = i - width };
@@ -111,6 +123,8 @@ graph *load_maze(FILE * fo, char **maze, int height, int width)
 				       find_weight((*maze + i)[0]));
 			graph_add_edge(g, curr.ptr, up.ptr,
 				       find_weight((*maze + i - width)[0]));
+			printf("edge from node %d -> node %d: %f\n", i, i - width, graph_get_edge_weight(g, curr.ptr, up.ptr));
+			printf("edge from node %d <- node %d: %f\n", i, i - width, graph_get_edge_weight(g, up.ptr, curr.ptr));
 		}
 	}
 
