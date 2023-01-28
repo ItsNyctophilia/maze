@@ -7,7 +7,8 @@
 enum {
 	SUCCESS = 0,
 	INVOCATION_ERROR = 1,
-	FILE_ERROR = 2
+	FILE_ERROR = 2,
+	INVALID_MAP = 3
 };
 
 union int_as_void {
@@ -49,10 +50,19 @@ int main(int argc, char *argv[])
 	// TODO: Validate symbols in maze
 	union int_as_void start = {.num = (strchr(maze, '@')) - maze };
 	union int_as_void finish = {.num = (strchr(maze, '>')) - maze };
+	union int_as_void test_finish = {.num = 1 };
+	list *test_path = dijkstra_path(g, start.ptr, test_finish.ptr);
+	if (list_size(test_path)) {
+		fprintf(stderr, "Error: unbounded maze\n");
+		graph_destroy(g);
+		list_destroy(test_path);
+		free(maze);
+		fclose(fo);
+		return (INVALID_MAP);
+	}
 	list *path = dijkstra_path(g, start.ptr, finish.ptr);
-	//graph_iterate_nodes(g, print_list);
-
 	list_iterate(path, add_path);
+	//Print array
 	for (int i = 0; i < height; ++i) {
 		for (int j = 0; j < width; ++j) {
 			if (maze[j + (width * i)] != 'X') {
@@ -60,12 +70,14 @@ int main(int argc, char *argv[])
 			}
 		}
 		if (i != 0 && i != height - 1) {
+			// Avoid unnecessary newlines for start and end of maze
 			putchar('\n');
 		}
 
 	}
 
 	graph_destroy(g);
+	list_destroy(test_path);
 	list_destroy(path);
 	free(maze);
 	fclose(fo);
