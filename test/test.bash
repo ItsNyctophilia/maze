@@ -229,6 +229,76 @@ else
     echo -e "10. Sample maze 03 test                : ${RED}FAIL${NC}"
 fi
 
+# Test 11: program exits without valid option
+
+FILES="./samp/water.txt"
+OPTIONS=""
+EXPECTED_OUTPUT="Error: invalid symbol(s) in maze"
+
+$PROGRAM $OPTIONS ${FILES[@]} 2> output.txt
+
+# Expected: Program prints error message and exits with code 4 for INVALID_MAP
+if [ $? -eq 4 ] && grep -q "$EXPECTED_OUTPUT" output.txt; then
+    echo -e "11. Water w/o option test              : ${GREEN}PASS${NC}"
+else
+    echo -e "11. Water w/o option test              : ${RED}FAIL${NC}"
+fi
+
+# Test 12: program handles water tiles
+
+FILES="./samp/water.txt"
+OPTIONS="-w"
+EXPECTED_OUTPUT="############
+# ....>    #
+#..       ~#
+#.########~#
+#..      ~~#
+# .....@ ~~#
+############
+"
+
+$PROGRAM $OPTIONS ${FILES[@]} > output.txt
+
+# Expected: Program solves maze and exits with code 0 for SUCCESS
+if [ $? -eq 0 ] && grep -q "$EXPECTED_OUTPUT" output.txt; then
+    echo -e "12. Water w/ option test               : ${GREEN}PASS${NC}"
+else
+    echo -e "12. Water w/ option test               : ${RED}FAIL${NC}"
+fi
+
+# Test 13: program exits without valid option
+
+FILES="./samp/door.txt"
+OPTIONS=""
+EXPECTED_OUTPUT="Error: invalid symbol(s) in maze"
+
+$PROGRAM $OPTIONS ${FILES[@]} 2> output.txt
+
+# Expected: Program prints error message and exits with code 4 for INVALID_MAP
+if [ $? -eq 4 ] && grep -q "$EXPECTED_OUTPUT" output.txt; then
+    echo -e "13. Door w/o option test               : ${GREEN}PASS${NC}"
+else
+    echo -e "13. Door w/o option test               : ${RED}FAIL${NC}"
+fi
+# Test 14: program handles water tiles
+
+FILES="./samp/water.txt"
+OPTIONS="-w"
+EXPECTED_OUTPUT="#######
+#.....#
+#@+++>#
+#######
+"
+
+$PROGRAM $OPTIONS ${FILES[@]} > output.txt
+
+# Expected: Program solves maze and exits with code 0 for SUCCESS
+if [ $? -eq 0 ] && grep -q "$EXPECTED_OUTPUT" output.txt; then
+    echo -e "14. Door w/ option test                : ${GREEN}PASS${NC}"
+else
+    echo -e "14. Door w/ option test                : ${RED}FAIL${NC}"
+fi
+
 # Cleanup temp files
 rm output.txt
 
