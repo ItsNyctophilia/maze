@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "lib/graph.h"
+#include "lib/graph.h"		// libraries and dependencies taken from Liam Echlin
 #include "lib/path.h"
 
 enum {
@@ -14,7 +14,7 @@ enum {
 };
 
 union int_as_void {
-	int num;		// TODO: Change this to long
+	long num;		// TODO: Change this to long
 	void *ptr;
 };
 

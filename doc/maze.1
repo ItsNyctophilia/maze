@@ -1,0 +1,39 @@
+.TH maze 1 "January 2023" "1.0" "maze manual"
+.SH NAME
+maze - finds the shortest path through an ASCII maze
+.SH SYNOPSIS
+.B maze [OPTIONS] mazefile
+.SH DESCRIPTION
+maze is a program that reads in a maze from a file and solves it using Dijkstra's algorithm. The solution is printed to stdout, denoting the path taken with dots. The program can handle mazes of varying sizes and features, including those with doors and water.
+
+The following options are available:
+.TP
+.B -d
+Includes doors in the maze; doors can be closed "+" or open "/", closed doors take one action to open
+.TP
+.B -w
+Includes water in the maze; water takes three times as long to cross as land
+.SH RETURN VALUE
+maze returns one of the following codes:
+.TP
+.B 0
+if the program ran successfully
+.TP
+.B 1
+if there was an error with the command line invocation
+.TP
+.B 2
+if there was an error opening or reading a file
+.TP
+.B 3
+if there was a memory error
+.TP
+.B 4
+if the given file contained an invalid maze
+.SH EXAMPLES
+To solve a maze with water and doors turned on:
+.TP
+.B $ maze -dw mazefile
+.SH AUTHOR
+Written by James Viner.
+
