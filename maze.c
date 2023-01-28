@@ -8,7 +8,8 @@ enum {
 	SUCCESS = 0,
 	INVOCATION_ERROR = 1,
 	FILE_ERROR = 2,
-	INVALID_MAP = 3
+	MEMORY_ERROR = 3,
+	INVALID_MAP = 4
 };
 
 union int_as_void {
@@ -47,12 +48,23 @@ int main(int argc, char *argv[])
 	int width;
 	dimensions_of_maze(fo, &height, &width);
 	graph *g = load_maze(fo, &maze, height, width);
-	// TODO: Validate symbols in maze
+	// Add null terminator before using string functions on maze
+	memset(maze + height * width, '\0', 1);
+	if (strlen(maze) != strspn(maze, " >@#X")) {
+		// Case: found disallowed symbols in maze
+		fprintf(stderr, "Error: invalid symbol(s) in maze\n");
+		graph_destroy(g);
+		free(maze);
+		fclose(fo);
+		return (INVALID_MAP);
+	}
 	union int_as_void start = {.num = (strchr(maze, '@')) - maze };
 	union int_as_void finish = {.num = (strchr(maze, '>')) - maze };
-	union int_as_void test_finish = {.num = 1 };
+	union int_as_void test_finish = {.num = 1 };	// Boundary at index 1
 	list *test_path = dijkstra_path(g, start.ptr, test_finish.ptr);
-	if (list_size(test_path)) {
+	if (list_size(test_path) != 0 && list_size(test_path) != 1) {
+		// Case: maze was not fully bounded, successful path was
+		// found to the boundary node at index 1.
 		fprintf(stderr, "Error: unbounded maze\n");
 		graph_destroy(g);
 		list_destroy(test_path);
@@ -60,8 +72,10 @@ int main(int argc, char *argv[])
 		fclose(fo);
 		return (INVALID_MAP);
 	}
+
 	list *path = dijkstra_path(g, start.ptr, finish.ptr);
 	list_iterate(path, add_path);
+
 	//Print array
 	for (int i = 0; i < height; ++i) {
 		for (int j = 0; j < width; ++j) {
@@ -93,9 +107,10 @@ graph *load_maze(FILE * fo, char **maze, int height, int width)
 {
 	char *line_buf = NULL;
 	size_t buf_size = 0;
-	*maze = malloc(((height * width)) * sizeof(**maze));
+	*maze = malloc(((height * width)) * sizeof(**maze) + 1);
 	if (!*maze) {
 		fprintf(stderr, "Memory allocation error");
+		exit(MEMORY_ERROR);
 	}
 
 	memset(*maze, ' ', width * height);	// Set all bytes except last to ' '
@@ -116,7 +131,10 @@ graph *load_maze(FILE * fo, char **maze, int height, int width)
 
 	graph *g = graph_create(maze_node_cmp, NULL);
 	for (int i = 0; i < height * width - 1; ++i) {
-		// TODO: fix index 0
+		// Known bug: index 0 doesn't get added to the graph because '0'
+		// is treated as a false value by graph_add_node. There are no 
+		// explicit consequences of this bug, given that it is a boundary node,
+		// but it personally annoys me.
 		if ((*maze + i)[0] == '#') {
 			continue;
 		}
@@ -158,21 +176,22 @@ double find_weight(char target)
 		return 1;
 	case 'X':
 		return .5;
-	case '#':
-		return 9999;
 	}
 	return 0;
 }
 
 void dimensions_of_maze(FILE * fo, int *height, int *width)
 {
+	// Height and width start at 2, because there is a box of 'X's
+	// representing boundary nodes that rings the entire maze.
 	*height = 2;
 	*width = 2;
+
 	char *line_buf = NULL;
 	size_t buf_size = 0;
 	while (getline(&line_buf, &buf_size, fo) != -1) {
 		strtok(line_buf, "\n");
-		// Width will never be negative, this is a safe case
+		// Width will never be negative, this is a safe cast
 		if (strlen(line_buf) > (unsigned)*width - 2) {
 			*width = strlen(line_buf) + 2;
 		}
@@ -181,5 +200,6 @@ void dimensions_of_maze(FILE * fo, int *height, int *width)
 	if (line_buf) {
 		free(line_buf);
 	}
+	// Reset file pointer position
 	fseek(fo, 0, SEEK_SET);
 }
