@@ -1,0 +1,110 @@
+\documentclass[11pt]{report}
+\usepackage[scaled]{helvet}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lipsum}
+\usepackage{inconsolata}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{setspace}
+\renewcommand\familydefault{\sfdefault}
+\pagenumbering{gobble}
+
+\begin{document}
+
+\title{Test Plan - Maze}
+\author{James Viner}
+\date{} %Remove date
+\maketitle
+
+\doublespacing
+
+\pagebreak
+\section*{Sample Files}
+\subsubsection*{\texttt{\textcolor{red}{basic\_maze.txt}}}
+A simple maze involving horizontal and vertical movement.
+\subsubsection*{\texttt{\textcolor{red}{empty.txt}}}
+An empty file.
+\subsubsection*{\texttt{\textcolor{red}{invalid\_symbol.txt}}}
+A maze with a dollar sign, which is an invalid symbol.
+\subsubsection*{\texttt{\textcolor{red}{map00.txt}}}
+A small, instructor-supplied sample maze.
+\subsubsection*{\texttt{\textcolor{red}{map01.tx}}}
+A small, instructor-supplied sample maze.
+\subsubsection*{\texttt{\textcolor{red}{map02.txt}}}
+A large, instructor-supplied sample maze.
+\subsubsection*{\texttt{\textcolor{red}{map03.txt}}}
+A large, instructor-supplied sample maze.
+\subsubsection*{\texttt{\textcolor{red}{no\_solution.txt}}}
+A maze without a valid path from start to end.
+\subsubsection*{\texttt{\textcolor{red}{out\_of\_bound.txt}}}
+A maze with a hole in the outer walls, allowing escape.
+\pagebreak
+\section*{Automated Test Cases}
+Automated tests may be executed with {\texttt{\color{red}make check}}, which builds and runs a bash script that performs unit tests for this program. Additional test details can be found in {\texttt{\color{red}test/test.bash}}; the script may have to be made executable before running.
+\pagebreak
+\section*{Common Test Cases}
+Prerequisites: {\texttt{\color{red}maze/}} directory does not already exist.
+\subsection*{TC1: Installation}
+\begin{enumerate}
+  \item {\texttt{\color{red}git clone} {\color{blue}git@git.umbc.tc}}{\color{red}:tdqc/tdqc12/jviner/maze.git}
+  \item {\texttt{\color{red}cd maze}}
+\end{enumerate}
+\textbf{Expected:} {\texttt{\color{red}maze/}} directory is created.
+\subsection*{TC2: Correct branch}
+\begin{enumerate}
+  \item {\color{red}git branch}
+\end{enumerate}
+\textbf{Expected:} {\color{red}main} is default branch.
+\subsection*{TC3: Build cleaning}
+\begin{enumerate}
+  \item {\texttt{\color{red}make}}
+  \item {\texttt{\color{red}make clean}}
+  \item {\texttt{\color{red}ls}}
+\end{enumerate}
+\textbf{Expected:} No .o files or executable files are left in directory.
+\pagebreak
+\section*{Project-Building Test Cases}
+Prerequisites: In the project's directory; have run {\texttt{\color{red}make clean}}.
+\subsection*{TC4: Build Explicit}
+\begin{enumerate}
+  \item {\texttt{\color{red}make maze}}
+  \item {\texttt{\color{red}ls maze}}
+\end{enumerate}
+\textbf{Expected:} File is listed.
+\subsection*{TC5: Build Implicit}
+\begin{enumerate}
+  \item {\texttt{\color{red}make}}
+  \item {\texttt{\color{red}ls maze}}
+\end{enumerate}
+\textbf{Expected:} File is listed.
+\subsection*{TC6: Build debugging}
+\begin{enumerate}
+  \item {\texttt{\color{red}make debug}}
+  \item {\texttt{\color{red}readelf --debug-dump=decodedline maze}}
+\end{enumerate}
+\textbf{Expected:} Debugging info is listed.
+\subsection*{TC7: Build profiling}
+\begin{enumerate}
+  \item {\texttt{\color{red}make profile}}
+\end{enumerate}
+\textbf{Expected:} Program build output contains -gp flags.
+\pagebreak
+\section*{File-Based Test Cases}
+Prerequisites: In the project's directory; have run {\texttt{\color{red}make}}; sample files in {\texttt{\color{red}samp/}} folder.
+\subsection*{TC8: Leak Prevention - Large sample file}
+\begin{enumerate}
+  \item {\texttt{\color{red}valgrind ./maze samp/map03.txt > /dev/null}}
+\end{enumerate}
+\textbf{Expected:} Program does not enter infinite loop, exits normally, and valgrind shows no leaks.
+\subsection*{TC9: Leak Prevention - Empty file}
+\begin{enumerate}
+  \item {\texttt{\color{red}valgrind ./maze samp/empty.txt}}
+\end{enumerate}
+\textbf{Expected:} valgrind shows no leaks. Nothing is printed.
+\subsection*{TC10: Leak Prevention - Nonexistent file}
+\begin{enumerate}
+  \item {\texttt{\color{red}valgrind ./maze samp/nonexistentfile.txt}}
+\end{enumerate}
+\textbf{Expected:} valgrind shows no leaks. Appropriate error message printed.
+\end{document}
